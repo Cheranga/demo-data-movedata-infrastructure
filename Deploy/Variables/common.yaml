@@ -1,0 +1,26 @@
+variables:
+  - group: MoveDataCommon
+  - name: environmentName
+    value: dev
+  - name: appName
+    value: movedata
+  - name: rgName
+    value: "rg-$(appName)-$(environmentName)"
+  - name: rgLocation
+    value: Australia Southeast
+  - name: createNewRg
+    value: true
+  - name: deploymentsOlderThan
+    value: -1
+  - name: sharedStorageName
+    value: "$(appName)$(environmentName)"
+  - name: sharedContainerName
+    value: armtemplates  
+  - name: sourceStorageName
+    value: "sgccsource$(environmentName)"        
+  - name: targetStorageName
+    value: "sgcctarget$(environmentName)"    
+  - name: sgType
+    value: Standard_GRS
+  - name: enableGit
+    value: false    

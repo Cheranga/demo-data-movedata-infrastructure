@@ -1,0 +1,41 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dfName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "tenantId": {
+            "type": "securestring",
+            "defaultValue": "TBD"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-06-01",
+            "name": "[parameters('dfName')]",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.DataFactory/factories",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "repoConfiguration": {
+                    "accountName": "cchatangala",
+                    "tenantId": "[parameters('tenantId')]",
+                    "collaborationBranch": "main",
+                    "projectName": "demodata",
+                    "repositoryName": "movedata",
+                    "type": "FactoryVSTSConfiguration"
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "dataFactoryResourceId": {
+            "type": "securestring",
+            "value": "[resourceId('Microsoft.DataFactory/factories',parameters('dfName'))]"
+        }
+    }
+}

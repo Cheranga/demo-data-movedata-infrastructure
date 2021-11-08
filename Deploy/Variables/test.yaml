@@ -1,0 +1,5 @@
+variables:
+  - name: environmentName
+    value: test  
+  - name: deploymentsOlderThan
+    value: -30 

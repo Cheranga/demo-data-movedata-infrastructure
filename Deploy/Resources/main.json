@@ -1,0 +1,179 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.1",
+    "parameters": {
+        "environmentName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "templateSas": {
+            "type": "securestring",
+            "defaultValue": "TBD"
+        },
+        "buildNumber": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "rgName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "rgLocation": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "sharedStorageName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "sharedStorageContainer": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "sourceStorageName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "targetStorageName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "sgType": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "appName": {
+            "type": "string",
+            "defaultValue": "TBD"
+        },
+        "tenantId": {
+            "type": "securestring",
+            "defaultValue": "TBD"
+        },
+        "enableGit": {
+            "type": "bool",
+            "defaultValue": false
+        }
+    },
+    "variables": {
+        "dfName": "[concat('adf-', parameters('appName'),'-',parameters('environmentName'))]",
+        "templateUri": "[concat('https://',parameters('sharedStorageName'),'.blob.core.windows.net/',parameters('sharedStorageContainer'))]",
+        "storageAccountSourceDeployment": "[concat(parameters('sourceStorageName'),'-',parameters('buildNumber'))]",
+        "storageAccountTargetDeployment": "[concat(parameters('targetStorageName'),'-',parameters('buildNumber'))]",
+        "keyVaultDeployment": "[concat(parameters('appName'),'-keyvault',parameters('buildNumber'))]",
+        "dataFactoryDeployment": "[concat('adf-',parameters('appName'),parameters('buildNumber'))]",
+        "setupGit": "[if(parameters('enableGit'),'yes','no')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('storageAccountSourceDeployment')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('templateUri'),'/StorageAccountSource/template.json','?', parameters('templateSas'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "sgName": {
+                        "value": "[parameters('sourceStorageName')]"
+                    },
+                    "sgType": {
+                        "value": "[parameters('sgType')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[variables('storageAccountTargetDeployment')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('templateUri'),'/StorageAccountTarget/template.json','?', parameters('templateSas'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "sgName": {
+                        "value": "[parameters('targetStorageName')]"
+                    },
+                    "sgType": {
+                        "value": "[parameters('sgType')]"
+                    }
+                }
+            }
+        },
+        {
+            "condition": "[equals(variables('setupGit'),'yes')]",
+            "name": "[concat('git-', variables('dataFactoryDeployment'))]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('templateUri'),'/DataFactory/templategit.json','?', parameters('templateSas'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "dfName": {
+                        "value": "[variables('dfName')]"
+                    },
+                    "tenantId": {
+                        "value": "[parameters('tenantId')]"
+                    }
+                }
+            }
+        },
+        {
+            "condition": "[equals(variables('setupGit'),'no')]",
+            "name": "[variables('dataFactoryDeployment')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('templateUri'),'/DataFactory/template.json','?', parameters('templateSas'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "dfName": {
+                        "value": "[variables('dfName')]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "[variables('keyVaultDeployment')]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-10-01",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('templateUri'),'/KeyVault/template.json','?', parameters('templateSas'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "kvName": {
+                        "value": "[concat('kv-', parameters('appName'),'-', parameters('environmentName'))]"
+                    },
+                    "dfName": {
+                        "value": "[variables('dfName')]"
+                    },
+                    "sourceStorageConnectionString": {
+                        "value": "[reference(variables('storageAccountSourceDeployment')).outputs.storageAccountConnectionString.value]"
+                    },
+                    "targetStorageConnectionString": {
+                        "value": "[reference(variables('storageAccountTargetDeployment')).outputs.storageAccountConnectionString.value]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[variables('storageAccountSourceDeployment')]",
+                "[variables('storageAccountTargetDeployment')]",
+                "[variables('dataFactoryDeployment')]"
+            ]
+        }
+    ]
+}
